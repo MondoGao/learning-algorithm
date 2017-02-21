@@ -1,3 +1,5 @@
+// WA
+// 自测数据通过
 //
 // Created by Mondo on 2017/2/20.
 //
@@ -5,36 +7,44 @@
 
 #include <stdio.h>
 #include <cstring>
+#include <cmath>
+#include <iostream>
+using namespace std;
 
-
-char start();
-class App;
-
-int main() {
-    App app;
-}
 
 class App {
 
 public:
     App() {
-        std::memset(wall, 0, sizeof(wall));
-        std::memset(paint, 0, sizeof(paint));
-        scanf("%d", &n);
+        memset(wall, 0, sizeof(wall));
+        memset(paint, 0, sizeof(paint));
+        min_steps = 500;
+        cin >> n;
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < n; ++j) {
                 char temp;
-                scanf(" %c", &temp);
+                cin >> temp;
                 if (temp == 'y') {
                     wall[i + 1][j + 1] = 1; // 空出一圈
                 }
             }
         }
+        enum_first();
+    }
+
+    void print() {
+        if (n < 1 || min_steps == 500) {
+            printf("inf");
+        } else {
+            printf("%d", min_steps);
+        }
+        printf("\n");
     }
 
 private:
 
     int n; // n 代表墙的长宽, 占用数组范围为 0-n+1 x 0-n
+    int min_steps;
     int wall[16][17];
     int paint[16][17];
 
@@ -59,7 +69,43 @@ private:
 
     // 枚举第一行的操作
     void enum_first() {
+        for (int i = 1; i < pow(2, n); ++i) {
+            if (guess()) {
+                int paints = paint_steps();
+                if (paints < min_steps) {
+                    min_steps = paints;
+                }
+            }
 
+            paint[1][1]++;
+            int c = 1;
+            while (paint[1][c] > 1) {
+                paint[1][c] = 0;
+                c++;
+                paint[1][c]++;
+            }
+            if (paint[1][n + 1] > 0) {
+                break;
+            }
+        }
+    }
+
+    int paint_steps() {
+        int paints = 0;
+        for (int i = 1; i < n + 1; ++i) {
+            for (int j = 1; j < n + 1; ++j) {
+                paints += paint[i][j];
+            }
+        }
+
+        return paints;
     }
 };
 
+
+
+int main() {
+    App app;
+    app.print();
+
+}
