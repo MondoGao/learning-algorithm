@@ -4,11 +4,11 @@
 // Created by Mondo on 2017/2/20.
 //
 // http://bailian.openjudge.cn/practice/2813/
+#include <iostream>
 
 #include <stdio.h>
 #include <cstring>
 #include <cmath>
-#include <iostream>
 using namespace std;
 
 
