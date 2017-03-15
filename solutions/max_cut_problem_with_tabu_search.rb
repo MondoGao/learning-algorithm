@@ -124,4 +124,83 @@ class TabuSearch
 
 end
 
-TabuSearch.new(node_num: 7).turn
+class TabuSearchImprove < TabuSearch
+
+  def initialize(node_num:)
+    super(node_num: node_num)
+  end
+
+  def flip_map(node_index)
+    (0..6).each do |i|
+      @map[i][node_index] = 0 - @map[i][node_index]
+    end
+    @map[node_index].map! { |node| -node }
+    puts "Map: #{@map.to_s}"
+  end
+
+  def caculate_f_improve(node_index)
+    sum = 0
+    @map[node_index].each { |node_state| sum += node_state }
+    final_f = sum + @current_f_value
+    puts "Function Value for #{node_index + 1}th: #{final_f}"
+    final_f
+  end
+
+  def turn
+    puts "Turn: #{@attempt_times + 1}".colorize(:green)
+
+    next_solutions = self.get_next_solutions
+    candidate_solution = nil
+    candidate_f = 0
+    candidate_solution_node_index = -1
+
+    puts "Next Solutions: #{next_solutions.to_s}"
+
+    next_solutions.each_with_index do |solution, index|
+      if !!solution
+        f = nil
+        if @attempt_times < 1
+          f = self.caculate_f(solution)
+        else
+          f = self.caculate_f_improve(index)
+        end
+        if f >= candidate_f
+          candidate_solution = solution
+          candidate_f = caculate_f(candidate_solution)
+          candidate_solution_node_index = index
+        end
+      end
+    end
+
+    puts "Candidate Solutions: #{candidate_solution.to_s}"
+    puts "Candidate Function Value: #{candidate_f.to_s}"
+
+    if candidate_f >= @best_f_value
+      @best_solution = candidate_solution
+      @best_f_value = candidate_f
+    end
+
+    puts "Best Solution: #{@best_solution}"
+    puts "Best Function Value: #{@best_f_value}"
+
+    self.flip_map(candidate_solution_node_index)
+    @current_solution = candidate_solution
+    @current_f_value = candidate_f
+
+    @attempt_times += 1
+    self.tabu_turn
+    @tabu_node_turn[candidate_solution_node_index] = 3
+    puts "Tabu List: #{@tabu_node_turn.to_s}"
+
+    puts ""
+
+    unless @attempt_times > 20 || !candidate_solution
+      self.turn
+    else
+      puts "Result: #{@best_f_value}"
+    end
+  end
+
+end
+
+TabuSearchImprove.new(node_num: 7).turn
