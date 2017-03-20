@@ -98,7 +98,7 @@ class TabuSearch
   end
 
   def can_stop?
-    @best_f_value > 516 || @attempt_times > @max_attempt_times
+    (@best_f_value > 516 && @attempt_times > 1000) || @attempt_times > @max_attempt_times
   end
 
   def print_candidate_solution
@@ -117,50 +117,55 @@ class TabuSearch
 
   # 一轮求解
   def turn
-    puts "Turn: #{@attempt_times + 1}".colorize(:green)
+    begin
+      puts "Turn: #{@attempt_times + 1}".colorize(:green)
 
-    next_solutions = self.get_next_solutions
-    candidate_solution = nil
-    candidate_f = 0
-    candidate_solution_node_index = -1
+      next_solutions = self.get_next_solutions
+      candidate_solution = nil
+      candidate_f = 0
+      candidate_solution_node_index = -1
 
-    puts "Next Solutions: #{next_solutions.to_s}"
+      puts "Next Solutions: #{next_solutions.to_s}"
 
-    next_solutions.each_with_index do |solution, index|
-      if !!solution
-        f = self.caculate_f_improve(solution)
-        if f >= candidate_f
-          candidate_solution = solution
-          candidate_f = f
-          candidate_solution_node_index = index
+      next_solutions.each_with_index do |solution, index|
+        if !!solution
+          f = self.caculate_f_improve(solution)
+          if f >= candidate_f
+            candidate_solution = solution
+            candidate_f = f
+            candidate_solution_node_index = index
+          end
         end
       end
-    end
 
-    @current_solution = candidate_solution
-    @current_f_value = candidate_f
+      @current_solution = candidate_solution
+      @current_f_value = candidate_f
 
-    self.print_candidate_solution
+      self.print_candidate_solution
 
-    if candidate_f >= @best_f_value
-      @best_solution = candidate_solution
-      @best_f_value = candidate_f
-    end
+      if candidate_f >= @best_f_value
+        @best_solution = candidate_solution
+        @best_f_value = candidate_f
+      end
 
-    self.print_best_solution
-
-    @tabu_node_turn[candidate_solution_node_index] = @tabu_length
-
-    @attempt_times += 1
-    self.tabu_turn
-
-    unless self.can_stop? || !candidate_solution
-      self.turn
-    else
-      puts "Result: "
       self.print_best_solution
-      @log_excel.write "./max_cut/#{@tabu_length}_#{Time.now.hour}_#{Time.now.min}.xls"
+
+      @tabu_node_turn[candidate_solution_node_index] = @tabu_length
+
+      @attempt_times += 1
+      self.tabu_turn
+
+      unless self.can_stop? || !candidate_solution
+        self.turn
+      else
+        puts "Result: "
+        self.print_best_solution
+        @log_excel.write "./max_cut/#{@tabu_length}_#{Time.now.hour}_#{Time.now.min}_#{@best_f_value}.xls"
+      end
+    rescue => e
+      @log_excel.write "./max_cut/#{@tabu_length}_#{Time.now.hour}_#{Time.now.min}_#{@best_f_value}.xls"
     end
+
   end
 
   # 从文件初始化实例
