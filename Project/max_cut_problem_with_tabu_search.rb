@@ -9,23 +9,28 @@ class TabuSearch
   def initialize(node_num:, tabu_length:, max_attempt_times:)
     @map = Array.new(node_num) { Array.new(node_num, 0) } # 二维图
     @current_solution = Array.new(node_num, 0).map {|i| rand > 0.5 ? 1 : 0} # 随机分配初始解
-    @current_f_value = self.caculate_f(@current_solution)
-
     @tabu_node_turn =Array.new(node_num, 0) # 禁忌表
+
+    @node_num = node_num
+    @max_attempt_times = max_attempt_times
+    @tabu_length = tabu_length
 
     @best_solution = Array.new(node_num, 0)
     @best_f_value = 0
     @attempt_times = 0
 
-    @node_num = node_num
-    @max_attempt_times = max_attempt_times
-    @tabu_length = tabu_length
 
     @log_file = File.new("max_cut/#{tabu_length}_#{Time.now.hour}_#{Time.now.min}.txt", 'w+')
 
     self.create_table
 
     log "Tabu Length: #{@tabu_length}, Max Attempt Times: #{@max_attempt_times}"
+  end
+
+  def first_turn
+    @current_f_value = self.caculate_f(@current_solution)
+    self.caculate_delta(self.get_next_solutions)
+    self
   end
 
   def create_table
@@ -57,6 +62,16 @@ class TabuSearch
     end
   end
 
+  def caculate_delta(solutions)
+    @f_delta = solutions.map.with_index do |solution, index|
+      self.caculate_f(solution) - @current_f_value
+    end
+  end
+
+  def recaculate_delta(index)
+
+  end
+
   # 计算函数值
   def caculate_f(solution)
     if !!solution
@@ -79,14 +94,13 @@ class TabuSearch
           end
         end
       end
-
       f
     else
       0
     end
   end
 
-  def caculate_f_improve(solution)
+  def caculate_f_improve(solution, index)
     self.caculate_f(solution)
   end
 
@@ -129,7 +143,7 @@ class TabuSearch
 
       next_solutions.each_with_index do |solution, index|
         if !!solution
-          f = self.caculate_f_improve(solution)
+          f = self.caculate_f_improve(solution, index)
           if f >= candidate_f
             candidate_solution = solution
             candidate_f = f
@@ -138,6 +152,7 @@ class TabuSearch
         end
       end
 
+      self.recaculate_delta(candidate_solution_node_index)
       @current_solution = candidate_solution
       @current_f_value = candidate_f
 
@@ -187,12 +202,25 @@ end
 
 class TabuSearchImprove < TabuSearch
 
-  def caculate_f_improve(solution)
-    sum = 0
-    @map[node_index].each { |node_state| sum += node_state }
-    final_f = sum + @current_f_value
-    puts "Function Value for #{node_index + 1}th: #{final_f}"
-    final_f
+  def caculate_f_improve(solution, index)
+    if !!solution
+      @current_f_value + @f_delta[index]
+    else
+      0
+    end
+  end
+
+  def recaculate_delta(flip_index)
+    @f_delta[flip_index] = -@f_delta[flip_index]
+    @map[flip_index].each_with_index do |node, index|
+      if node != 0
+        if @current_solution[flip_index] == @current_solution[index]
+          @f_delta[index] -= 2
+        else
+          @f_delta[index] += 2
+        end
+      end
+    end
   end
 
 end
@@ -200,4 +228,4 @@ end
 ARGV[0] ||= 5
 ARGV[1] ||= 10
 
-TabuSearch.new_from_file(file_path: 'max_cut_problem_with_tabu_search_data.txt', tabu_length: ARGV[0].to_i, max_attempt_times: ARGV[1].to_i).turn
+TabuSearchImprove.new_from_file(file_path: 'max_cut_problem_with_tabu_search_data.txt', tabu_length: ARGV[0].to_i, max_attempt_times: ARGV[1].to_i).first_turn.turn

@@ -6,3 +6,4 @@ gem "pry"
 gem "colorize"
 gem 'pry-remote'
 gem 'pry-nav'
+gem 'spreadsheet'
