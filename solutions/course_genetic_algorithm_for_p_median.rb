@@ -165,18 +165,6 @@ class GeneticAlgorithm
     @populations
   end
   
-  def start
-    self.set_population_size
-    self.init_population
-    @iter = 1
-    @max_iter = 1
-    
-    while @max_iter < (@n_num * @p_num**0.5).ceil
-      self.turn
-      @max_iter += 1
-    end
-  end
-  
   def get_rand_parent_index
     rand(@population_size)
   end
@@ -210,9 +198,17 @@ class GeneticAlgorithm
     self.log_to_sheet draft
 
     while draft.size > @p_num
-      draft.delete_if { |point|
-        point == uncommon.max { |a, b| a.fitness <=> b.fitness}
+      ori_fitness = Solution.new(draft, @n_arr).fitness
+      min_index = 0
+      min_increace =  Solution.new(draft.reject { |p| p == draft[0] }, @n_arr).fitness - ori_fitness
+      uncommon.each_with_index { |un_point, index|
+        new_increace = Solution.new(draft.reject { |p| p == un_point }, @n_arr).fitness - ori_fitness
+        if new_increace < min_increace
+          min_increace = new_increace
+          min_index = index
+        end
       }
+      draft.delete_at min_index
     end
 
     # Candidate
@@ -222,14 +218,50 @@ class GeneticAlgorithm
     
     # Fitness
     self.log_to_sheet candidate.fitness
+
+    puts candidate
+    puts candidate.fitness
+
+    @candidate = candidate
+  end
+  
+  def replacement_operator
+    max_fitness_solution = @populations.max { |a, b| a.fitness <=> b.fitness}
     
+    # 如果大于最坏的函数值，抛弃
+    return if @candidate.fitness > max_fitness_solution.fitness
+    # 如果与群体中某个解一致，抛弃
+    return if @populations.index{ |solution|
+      (0..@p_num - 1).each { |i|
+        return false unless solution.members[i] == @candidate.members[i]
+      }
+      true
+    }
     
+    max_fitness_index = @populations.index max_fitness_solution
+    @population[max_fitness_index] = @candidate
+    @max_iter = 0
   end
   
   def turn
     self.log_to_sheet @iter
     self.generation_operator
-    
+    self.replacement_operator
+    save_log_sheet
+    @log_sheet_row += 1
+    @iter += 1
+    @max_iter += 1
+  end
+  
+  def start
+    self.set_population_size
+    self.init_population
+    @iter = 1
+    @max_iter = 1
+  
+    while @max_iter < (@n_num * @p_num**0.5).ceil
+      self.turn
+    end
   end
   
   def self.new_from_sheet(path)
