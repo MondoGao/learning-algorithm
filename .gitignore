@@ -3,3 +3,4 @@
 cmake-build-debug
 *.iml
 max_cut/
+genetic_algorithm/
