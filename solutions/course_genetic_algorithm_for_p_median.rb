@@ -28,7 +28,6 @@ module SpreadSheetModule
 
   def log_to_sheet(*cols)
     @log_sheet.row(@log_sheet_row).push cols
-    @log_sheet_row += 1
   end
   
   def save_log_sheet
@@ -63,8 +62,40 @@ class GeneticAlgorithm
   class Solution
     attr_accessor :members, :fitness
     
-    def initialize(members)
+    def initialize(members, points)
       @members = members
+      self.caculate_fitness points
+    end
+    
+    def caculate_fitness(points)
+      sum = 0
+      
+      # 获取解之外的点
+      other_points = points.select { |point|
+        !(members.include? point)
+      }
+      
+      for i in (0..other_points.size - 1)
+        # assign_point = members[0]
+        min_dis =  self.caculate_distance(other_points[i], members[0])
+        
+        # 计算该点被分配的点
+        for j in (1..members.size - 1)
+          new_dis = self.caculate_distance(other_points[i], members[j])
+          if new_dis < min_dis
+            min_dis = new_dis
+            # assign_point = members[j]
+          end
+        end
+        
+        sum += min_dis * other_points[i].weight
+      end
+      
+      @fitness = sum
+    end
+    
+    def caculate_distance(point1, point2)
+      ((point1.x - point2.x)**2 + (point1.y - point2.y)**2)**0.5
     end
   end
   
@@ -106,17 +137,19 @@ class GeneticAlgorithm
         members = []
         
         j = init_j
+
+        # 如果已经超出下标且应该进行第二轮
+        if j + i * @p_num * k > @n_num - 1 && init_j < k - 1
+          init_j += 1
+          j = init_j
+          i = 0
+        end
+        
         # 0..2
         @p_num.times {
           # 第一轮：0，1，2；第二轮：3，4，5
           # 第一轮：0, 2, 4；第二轮：6, 8, 10
           index = j + i * @p_num * k
-          if index > @n_num - 1 && init_j < k - 1
-            init_j += 1
-            j = init_j
-            i = 0
-            index = j + i * @p_num * k
-          end
           # 如果大于所有点的个数随机生成一个
           index = rand(0..@n_num - 1) if index > @n_num - 1
           members << @n_arr[index]
@@ -124,7 +157,8 @@ class GeneticAlgorithm
         }
 
         i += 1
-        @populations << Solution.new(members)
+
+        @populations << Solution.new(members, @n_arr)
       }
     }
     
@@ -134,6 +168,68 @@ class GeneticAlgorithm
   def start
     self.set_population_size
     self.init_population
+    @iter = 1
+    @max_iter = 1
+    
+    while @max_iter < (@n_num * @p_num**0.5).ceil
+      self.turn
+      @max_iter += 1
+    end
+  end
+  
+  def get_rand_parent_index
+    rand(@population_size)
+  end
+  
+  def generation_operator
+    parent_1_index = self.get_rand_parent_index
+    parent_2_index = self.get_rand_parent_index
+
+    parent_1 = @populations[parent_1_index].members
+    parent_2 = @populations[parent_2_index].members
+    
+    # Merge
+    self.log_to_sheet "#{parent_1_index} and #{parent_2_index}"
+    
+    common = []
+    uncommon = []
+    parent_1.each { |point|
+      if parent_2.include?(point)
+        common << point
+      else
+        uncommon << point
+      end
+    }
+    parent_2.each { |point|
+      uncommon << point unless common.include?(point)
+    }
+    
+    draft = [common, uncommon].flatten
+    
+    # Draft
+    self.log_to_sheet draft
+
+    while draft.size > @p_num
+      draft.delete_if { |point|
+        point == uncommon.max { |a, b| a.fitness <=> b.fitness}
+      }
+    end
+
+    # Candidate
+    self.log_to_sheet draft
+
+    candidate = Solution.new(draft, @n_arr)
+    
+    # Fitness
+    self.log_to_sheet candidate.fitness
+    
+    
+  end
+  
+  def turn
+    self.log_to_sheet @iter
+    self.generation_operator
+    
   end
   
   def self.new_from_sheet(path)
