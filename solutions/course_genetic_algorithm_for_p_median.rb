@@ -199,16 +199,17 @@ class GeneticAlgorithm
 
     while draft.size > @p_num
       ori_fitness = Solution.new(draft, @n_arr).fitness
-      min_index = 0
-      min_increace =  Solution.new(draft.reject { |p| p == draft[0] }, @n_arr).fitness - ori_fitness
+      min_point = uncommon[0]
+      min_increace =  Solution.new(draft.reject { |p| p == min_point }, @n_arr).fitness - ori_fitness
       uncommon.each_with_index { |un_point, index|
         new_increace = Solution.new(draft.reject { |p| p == un_point }, @n_arr).fitness - ori_fitness
         if new_increace < min_increace
           min_increace = new_increace
-          min_index = index
+          min_point = un_point
         end
       }
-      draft.delete_at min_index
+      uncommon.delete_if { |point| point == min_point}
+      draft.delete_if { |point| point == min_point}
     end
 
     # Candidate
@@ -227,20 +228,21 @@ class GeneticAlgorithm
   
   def replacement_operator
     max_fitness_solution = @populations.max { |a, b| a.fitness <=> b.fitness}
+    @best_fitness_solution = @populations.min { |a, b| a.fitness <=> b.fitness}
     
     # 如果大于最坏的函数值，抛弃
     return if @candidate.fitness > max_fitness_solution.fitness
     # 如果与群体中某个解一致，抛弃
     return if @populations.index{ |solution|
+      flag = true
       (0..@p_num - 1).each { |i|
-        return false unless solution.members[i] == @candidate.members[i]
+        flag = false if solution.members[i] != @candidate.members[i]
       }
-      true
+      flag
     }
     
     max_fitness_index = @populations.index max_fitness_solution
-    @population[max_fitness_index] = @candidate
-    @max_iter = 0
+    @populations[max_fitness_index] = @candidate
   end
   
   def turn
@@ -248,6 +250,12 @@ class GeneticAlgorithm
     self.generation_operator
     self.replacement_operator
     save_log_sheet
+    
+    puts @best_fitness_solution.fitness
+    
+    unless @populations.min { |a, b| a.fitness <=> b.fitness}.fitness == @best_fitness_solution.fitness
+      @max_iter = 0
+    end
     @log_sheet_row += 1
     @iter += 1
     @max_iter += 1
