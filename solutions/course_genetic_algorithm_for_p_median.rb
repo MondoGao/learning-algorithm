@@ -27,7 +27,7 @@ module SpreadSheetModule
   end
 
   def log_to_sheet(*cols)
-    @log_sheet.row(@log_sheet_row).push cols
+    @log_sheet.row(@log_sheet_row).push *(cols.map {|item| item.to_s})
   end
   
   def save_log_sheet
@@ -55,6 +55,10 @@ class GeneticAlgorithm
       @x = x
       @y = y
       @weight = weight
+    end
+    
+    def to_str
+      "(#{@x}, #{y})"
     end
   end
   
@@ -100,8 +104,7 @@ class GeneticAlgorithm
   end
   
   def initialize
-    self.create_log_sheet "genetic_algorithm/#{Time.now.hour}_#{Time.now.min}", "Iterator", "Merge", "Draft", "Candidate", "FitNess", "Replace", "Comment"
-    self.save_log_sheet
+    self.create_log_sheet "genetic_algorithm/#{Time.now.hour}_#{Time.now.min}", "Iterator", "Merge", "Draft", "Candidate", "Fitness", "Best Fitness", "Best Solution"
   end
   
   def set_data_from_sheet
@@ -195,7 +198,7 @@ class GeneticAlgorithm
     draft = [common, uncommon].flatten
     
     # Draft
-    self.log_to_sheet draft
+    self.log_to_sheet draft.map {|point| "(#{point.x}, #{point.y})"}
 
     while draft.size > @p_num
       ori_fitness = Solution.new(draft, @n_arr).fitness
@@ -213,7 +216,7 @@ class GeneticAlgorithm
     end
 
     # Candidate
-    self.log_to_sheet draft
+    self.log_to_sheet draft.map {|point| "(#{point.x}, #{point.y})"}
 
     candidate = Solution.new(draft, @n_arr)
     
@@ -229,7 +232,10 @@ class GeneticAlgorithm
   def replacement_operator
     max_fitness_solution = @populations.max { |a, b| a.fitness <=> b.fitness}
     @best_fitness_solution = @populations.min { |a, b| a.fitness <=> b.fitness}
-    
+
+    self.log_to_sheet @best_fitness_solution.fitness
+    self.log_to_sheet @best_fitness_solution.members.map {|point| "(#{point.x}, #{point.y})"}
+
     # 如果大于最坏的函数值，抛弃
     return if @candidate.fitness > max_fitness_solution.fitness
     # 如果与群体中某个解一致，抛弃
@@ -249,7 +255,6 @@ class GeneticAlgorithm
     self.log_to_sheet @iter
     self.generation_operator
     self.replacement_operator
-    save_log_sheet
     
     puts @best_fitness_solution.fitness
     
@@ -270,6 +275,9 @@ class GeneticAlgorithm
     while @max_iter < (@n_num * @p_num**0.5).ceil
       self.turn
     end
+
+    self.save_log_sheet
+
   end
   
   def self.new_from_sheet(path)
