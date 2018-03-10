@@ -17,7 +17,7 @@ void permutations(T list[], int cut, int end)
 {
     if (cut == end)
     {
-        // 直接输出
+        // 只有一种排列直接输出
         copy(list, list + end + 1, ostream_iterator<T>(cout, " "));
         cout << endl;
     }
@@ -31,4 +31,9 @@ void permutations(T list[], int cut, int end)
             swap(list[i], list[cut]);
         }
     }
+}
+
+int main() {
+    char a[]{'a', 'b', 'c'};
+    permutations(a, 0, 2);
 }

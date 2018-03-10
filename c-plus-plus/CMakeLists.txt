@@ -4,4 +4,4 @@ project(learn-algorithm)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(learn-algorithm main.cpp permutations.cpp)
+add_executable(learn-algorithm 1-32_permutations.cpp)
